@@ -39,7 +39,7 @@ See `docs/architecture.png` for a visual diagram.
 
 ```
 ├── ingestion/          # API pull script
-├── dbt_project/        # staging + mart models, tests
+├── dbt/                 # dbt project — staging + mart models, tests
 ├── dashboards/          # dashboard screenshots
 ├── docs/                # architecture diagram, notes
 └── requirements.txt
@@ -62,21 +62,23 @@ See `docs/architecture.png` for a visual diagram.
    python ingestion/pull_jobs.py
    ```
 
-## Key findings
+## Data sources & known limitations
 
-*(Filled in once the dashboard is built — e.g. "dbt appeared in X% of NL
-postings", "average posted salary in IE was €X vs €Y in ES")*
+- **Coverage:** Adzuna covers NL, DE, ES, GB. Ireland is not a supported
+  Adzuna country — a planned v1.1 adds RemoteOK's API as a second source,
+  partly to fill this gap and partly because it also surfaces remote-specific
+  postings relevant to my own job search.
+- **Description length:** Adzuna's free tier returns truncated (~500 char)
+  job descriptions, not full text. Skill-extraction from descriptions is
+  therefore directional, not exhaustive — skills mentioned later in a full
+  posting will be undercounted. A paid tier or a scraping fallback would
+  resolve this in a future version.
 
 ## Status / roadmap
 
-- [x] API ingestion script
+- [x] API ingestion script (NL, DE, ES, GB)
 - [ ] Load to BigQuery
 - [ ] dbt staging + mart models with tests
 - [ ] Looker Studio dashboard
-- [ ] Automate weekly runs (v2 — currently run manually)
-
-## Author
-
-Built by [Your Name] — Colombian, based in Spain, transitioning from MBA/business
-background into Data Analytics/Engineering.
-[LinkedIn] · [Other repos]
+- [ ] v1.1: add RemoteOK as a second source (Ireland + remote coverage)
+- [ ] v2: automate weekly runs (currently run manually)

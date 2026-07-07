@@ -12,7 +12,7 @@ import requests   # lets Python make web/API calls
 import pandas as pd
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv  # reads variables from a local .env file
 
 # ---------------------------------------------------------
@@ -34,9 +34,12 @@ if not APP_ID or not APP_KEY:
 
 # Countries Adzuna supports with their country codes.
 # gb = UK, used partly as a proxy for "remote-friendly" postings.
+# Note: 'ie' (Ireland) is NOT a supported Adzuna country code — confirmed
+# via API error response. Using 'de' (Germany) instead, which also fits
+# since you have intermediate German skills.
 COUNTRIES = {
     "nl": "Netherlands",
-    "ie": "Ireland",
+    "de": "Germany",
     "es": "Spain",
     "gb": "United Kingdom",
 }
@@ -54,6 +57,8 @@ PAGES_PER_SEARCH = 2    # 2 pages x 50 = up to 100 postings per term/country
 # ---------------------------------------------------------
 # 2. FUNCTION — pull one page of results from Adzuna
 # ---------------------------------------------------------
+
+
 def fetch_jobs(country_code, search_term, page=1):
     """
     Calls the Adzuna API for a given country/search term/page.
@@ -74,6 +79,8 @@ def fetch_jobs(country_code, search_term, page=1):
     if response.status_code != 200:
         print(f"  ⚠️  Failed: {country_code} / {search_term} / page {page} "
               f"(status {response.status_code})")
+        # show Adzuna's actual error message
+        print(f"      → {response.text[:300]}")
         return []
 
     data = response.json()
@@ -110,7 +117,7 @@ def main():
                         "created": job.get("created"),
                         "description": job.get("description"),
                         "redirect_url": job.get("redirect_url"),
-                        "pulled_at": datetime.utcnow().isoformat(),
+                        "pulled_at": datetime.now(timezone.utc).isoformat(),
                     })
 
                 time.sleep(0.5)  # be polite to the API, avoid rate limits
@@ -122,12 +129,13 @@ def main():
 
     # Drop exact duplicate postings (same title/company/location/description)
     before = len(df)
-    df = df.drop_duplicates(subset=["title", "company", "location", "description"])
+    df = df.drop_duplicates(
+        subset=["title", "company", "location", "description"])
     after = len(df)
     print(f"\nRemoved {before - after} duplicate postings.")
 
     os.makedirs("raw", exist_ok=True)
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     output_path = f"raw/jobs_{today}.csv"
     df.to_csv(output_path, index=False)
 
