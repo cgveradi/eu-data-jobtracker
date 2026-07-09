@@ -1,3 +1,16 @@
+-- Mart model: flags which skills/tools are mentioned in each job posting's
+-- description. One row per job posting, one boolean column per skill.
+--
+-- Note: descriptions are truncated to ~500 characters by Adzuna's free tier,
+-- so this undercounts skills mentioned later in the full posting. Directional
+-- signal, not exhaustive — documented in the README as a known limitation.
+--
+-- Note: "R" (the language) is deliberately excluded from this list.
+-- Single-letter names are unreliable to regex-match against free text —
+-- \bR\b was found matching "R&D" (Research & Development), a common,
+-- unrelated phrase in job postings, producing false-positive counts far
+-- higher than genuine mentions. Also documented as a known limitation.
+
 with staged as (
 
     select * from {{ ref('stg_jobs') }}
@@ -8,6 +21,11 @@ flagged as (
 
     select
         *,
+
+        -- REGEXP_CONTAINS is case-sensitive by default, so we lower() the
+        -- description once and match lowercase patterns against it.
+        -- (?i) isn't needed in BigQuery's re2 syntax when we lower() first.
+
         regexp_contains(lower(description), r'\bsql\b')            as mentions_sql,
         regexp_contains(lower(description), r'\bpython\b')         as mentions_python,
         regexp_contains(lower(description), r'\bdbt\b')            as mentions_dbt,
@@ -25,7 +43,6 @@ flagged as (
         regexp_contains(lower(description), r'\bdocker\b')          as mentions_docker,
         regexp_contains(lower(description), r'\bkubernetes\b')      as mentions_kubernetes,
         regexp_contains(lower(description), r'\bkafka\b')           as mentions_kafka,
-        regexp_contains(lower(description), r'\br\b')               as mentions_r_lang,
 
         -- whether the posting appears remote-friendly, based on location text
         regexp_contains(lower(job_location), r'\bremote\b')

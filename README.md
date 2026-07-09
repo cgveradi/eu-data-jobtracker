@@ -1,8 +1,8 @@
 # EU Data Job Market Tracker
 
 A data pipeline that pulls live data analyst / data engineer / data scientist
-job postings across the Netherlands, Ireland, Spain, and the UK, and surfaces
-which tools, skills, and salary ranges are actually in demand right now.
+job postings across the Netherlands, Germany, Spain, and the UK, and surfaces
+which tools and skills are actually in demand right now.
 
 **Why I built this:** I'm transitioning from an MBA background into data
 analytics (bootcamp graduate, self-taught SQL/Python), and I wanted to base
@@ -23,9 +23,10 @@ See `docs/architecture.png` for a visual diagram.
 
 - Which tools/technologies (SQL, Python, dbt, Airflow, Snowflake, etc.) show
   up most often in data job postings across these countries?
-- How do salary ranges compare between NL, IE, ES, and the UK?
-- What share of postings are remote-friendly?
-- How is demand trending week over week?
+- How does skill demand differ by country — should I emphasize different
+  tools when applying to NL vs. DE vs. ES vs. UK roles?
+- What share of postings are tagged remote-friendly?
+- Which role type (analyst/engineer/scientist) has the most postings?
 
 ## Tech stack
 
@@ -62,6 +63,33 @@ See `docs/architecture.png` for a visual diagram.
    python ingestion/pull_jobs.py
    ```
 
+## Key findings
+
+Based on 1,182 postings for Data Analyst/Engineer/Scientist roles across
+NL, DE, ES, and the UK (pulled July 2026):
+
+- **Top skills overall:** Python (38 mentions), Azure (34), SQL (29), AWS (28),
+  and Power BI (26) lead the tracked skill list. Cloud platforms (Azure, AWS,
+  GCP combined) appear more often than any single BI tool.
+- **UK postings are notably more skill-dense** than NL/DE/ES — despite all
+  four countries having near-identical average description length (~498-499
+  characters, all near Adzuna's truncation limit), UK postings mention
+  roughly double the skills per posting of the other markets. This likely
+  reflects how UK job ads are written (more keyword-forward, tool lists
+  early in the text) rather than roles requiring more skills — the data
+  can't fully distinguish the two explanations.
+- **Postings are split almost evenly across the four countries** (~25%
+  each), suggesting Adzuna's coverage is reasonably balanced, not skewed
+  toward one market.
+- **95.9% of postings are not tagged remote-friendly.** Traditional job
+  board coverage skews heavily toward onsite/hybrid roles — a strong
+  argument for the planned v1.1 RemoteOK addition, which should surface
+  a very different, more remote-skewed picture.
+- **"Data engineer" was the most-retrieved search term** (100 postings vs.
+  ~65 each for analyst/scientist) — worth noting this reflects the query
+  design (results-per-page cap) more than true market demand, and isn't a
+  claim about which role has more real openings.
+
 ## Data sources & known limitations
 
 - **Coverage:** Adzuna covers NL, DE, ES, GB. Ireland is not a supported
@@ -73,12 +101,24 @@ See `docs/architecture.png` for a visual diagram.
   therefore directional, not exhaustive — skills mentioned later in a full
   posting will be undercounted. A paid tier or a scraping fallback would
   resolve this in a future version.
+- **Single-letter skill names are unreliable to regex-match:** an early
+  version tracked "R" (the language) and found it "mentioned" in 143
+  postings — far more than Python or SQL. Inspecting the matches showed
+  the regex was catching "R&D" (Research & Development), unrelated
+  boilerplate text, not the language. R was removed from tracked skills
+  as a result. General lesson: validate extraction results against raw
+  text before trusting them, especially for short/ambiguous patterns.
 
 ## Status / roadmap
 
 - [x] API ingestion script (NL, DE, ES, GB)
-- [ ] Load to BigQuery
-- [ ] dbt staging + mart models with tests
-- [ ] Looker Studio dashboard
+- [x] Load to BigQuery
+- [x] dbt staging + mart models with tests
+- [x] Looker Studio dashboard
 - [ ] v1.1: add RemoteOK as a second source (Ireland + remote coverage)
 - [ ] v2: automate weekly runs (currently run manually)
+
+## Author
+
+Transitioning from MBA/business
+background into Data Analytics/Engineering.

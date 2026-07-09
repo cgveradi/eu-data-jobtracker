@@ -8,3 +8,10 @@ models:
         tests:
           - not_null
           - unique
+
+  - name: skills_long
+    description: "Long/tidy format: one row per (posting, skill) pair, only where the skill was mentioned. Built for charting — feeds the 'top skills' visual in Looker Studio."
+    columns:
+      - name: skill
+        tests:
+          - not_null

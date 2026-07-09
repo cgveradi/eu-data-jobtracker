@@ -1,3 +1,6 @@
+-- Staging model: light cleanup of raw Adzuna job postings.
+-- No business logic here — just standardize types, trim text, handle nulls.
+-- Skill extraction and anything "smart" belongs in the mart layer, not here.
 
 with source as (
 
