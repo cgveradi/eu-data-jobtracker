@@ -1,8 +1,9 @@
 """
-EU Data Job Market Tracker — Day 1: Data ingestion
+EU Data Job Market Tracker — Data ingestion
 ----------------------------------------------------
 Pulls job postings from the Adzuna API for data-related roles
-across a few target countries, and saves them as a single CSV.
+across a few target countries, saves them as a local CSV, and
+loads them into BigQuery (raw layer) for dbt to pick up.
 
 Beginner notes are left in as comments on purpose — delete them
 once you're comfortable with what each part does.
@@ -14,6 +15,7 @@ import time
 import os
 from datetime import datetime, timezone
 from dotenv import load_dotenv  # reads variables from a local .env file
+from google.cloud import bigquery  # loads data into BigQuery
 
 # ---------------------------------------------------------
 # 1. CONFIG — credentials are read from a .env file, never hardcoded
@@ -21,6 +23,9 @@ from dotenv import load_dotenv  # reads variables from a local .env file
 #       ADZUNA_APP_ID=your_id_here
 #       ADZUNA_APP_KEY=your_key_here
 #    This file is gitignored — it will never be pushed to GitHub.
+#
+#    BigQuery auth uses your local Application Default Credentials
+#    (gcloud auth application-default login) — no key file needed.
 # ---------------------------------------------------------
 load_dotenv()
 APP_ID = os.getenv("ADZUNA_APP_ID")
@@ -31,6 +36,10 @@ if not APP_ID or not APP_KEY:
         "Missing API credentials. Create a .env file with "
         "ADZUNA_APP_ID and ADZUNA_APP_KEY set."
     )
+
+BQ_PROJECT = "eu-data-jobtracker"
+BQ_DATASET = "job_market_raw"
+BQ_TABLE = "raw_jobs"
 
 # Countries Adzuna supports with their country codes.
 # gb = UK, used partly as a proxy for "remote-friendly" postings.
@@ -88,7 +97,35 @@ def fetch_jobs(country_code, search_term, page=1):
 
 
 # ---------------------------------------------------------
-# 3. MAIN LOOP — pull everything and collect into one list
+# 3. FUNCTION — load a DataFrame into BigQuery
+# ---------------------------------------------------------
+
+
+def load_to_bigquery(df, project_id=BQ_PROJECT, dataset=BQ_DATASET, table=BQ_TABLE):
+    """
+    Appends the DataFrame into the BigQuery raw table.
+    Uses Application Default Credentials picked up automatically from
+    `gcloud auth application-default login` — nothing to configure here.
+    """
+    client = bigquery.Client(project=project_id)
+    table_id = f"{project_id}.{dataset}.{table}"
+
+    job_config = bigquery.LoadJobConfig(
+        write_disposition="WRITE_APPEND",  # keep accumulating each run
+        autodetect=True,
+    )
+
+    print(f"\nLoading {len(df)} rows into {table_id}...")
+    load_job = client.load_table_from_dataframe(
+        df, table_id, job_config=job_config)
+    load_job.result()  # blocks until the load finishes
+
+    table_ref = client.get_table(table_id)
+    print(f"✅ Loaded. Table now has {table_ref.num_rows} total rows.")
+
+
+# ---------------------------------------------------------
+# 4. MAIN LOOP — pull everything and collect into one list
 # ---------------------------------------------------------
 def main():
     all_jobs = []
@@ -123,7 +160,7 @@ def main():
                 time.sleep(0.5)  # be polite to the API, avoid rate limits
 
     # ---------------------------------------------------------
-    # 4. SAVE RESULTS
+    # 5. SAVE RESULTS — local CSV (audit trail) + BigQuery (raw layer)
     # ---------------------------------------------------------
     df = pd.DataFrame(all_jobs)
 
@@ -138,8 +175,9 @@ def main():
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     output_path = f"raw/jobs_{today}.csv"
     df.to_csv(output_path, index=False)
-
     print(f"\n✅ Saved {len(df)} job postings to {output_path}")
+
+    load_to_bigquery(df)
 
 
 if __name__ == "__main__":
