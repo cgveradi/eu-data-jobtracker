@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: skills_extracted
+    description: "One row per job posting, with boolean flags for whether each tracked skill/tool is mentioned in the description."
+    columns:
+      - name: redirect_url
+        tests:
+          - not_null
+          - unique

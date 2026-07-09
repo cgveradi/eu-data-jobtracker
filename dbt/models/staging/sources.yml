@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: job_market_raw
+    database: eu-data-jobtracker
+    schema: job_market_raw
+    tables:
+      - name: raw_jobs
+        description: "Raw job postings pulled from the Adzuna API, loaded manually into BigQuery."
